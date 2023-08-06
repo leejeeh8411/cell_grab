@@ -37,6 +37,15 @@ UINT ThreadGrab(LPVOID lParam)
 }
 
 
+UINT Thread_SetCellNo(LPVOID lParam)
+{
+	Ccell_grabDlg *pView = (Ccell_grabDlg *)lParam;
+	
+	pView->AddCellID();
+
+	return 1;
+}
+
 
 // 응용 프로그램 정보에 사용되는 CAboutDlg 대화 상자입니다.
 
@@ -143,6 +152,8 @@ BOOL Ccell_grabDlg::OnInitDialog()
 	_grab_buf = new unsigned char[WIDTH * GRAB_BUF_SIZE];
 	memset(_grab_buf, 0, sizeof(unsigned char) * WIDTH * GRAB_BUF_SIZE);
 
+	memset(_cell_id_map, 0, sizeof(int) * GRAB_BUF_CNT);
+
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
 
@@ -183,6 +194,32 @@ int Ccell_grabDlg::GetSearchTabEdgePos()
 void Ccell_grabDlg::SetSearchTabEdgePos(int search_tab_edge_pos)
 {
 	_search_tab_edge_pos = search_tab_edge_pos;
+}
+
+int Ccell_grabDlg::GetCellId()
+{
+	return _cell_id;
+}
+
+void Ccell_grabDlg::SetCellId(int cell_id)
+{
+	_cell_id = cell_id;
+}
+
+void Ccell_grabDlg::AddCellID()
+{
+	int current_idx = GetCurrentGrabIdx();
+	int cell_id = GetCellId();
+
+	PutCellId(current_idx, cell_id);
+
+	cell_id++;
+	SetCellId(cell_id);
+}
+
+void Ccell_grabDlg::PutCellId(int grab_idx, int cell_id)
+{
+	_cell_id_map[grab_idx] = cell_id;
 }
 
 void Ccell_grabDlg::DoGrab()

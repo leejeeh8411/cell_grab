@@ -44,6 +44,13 @@ public:
 	void Ccell_grabDlg::SetSearchTab(bool searchTab);
 	int Ccell_grabDlg::GetSearchTabEdgePos();
 	void Ccell_grabDlg::SetSearchTabEdgePos(int searchTab);
+	
+	void Ccell_grabDlg::PutCellId(int grab_idx, int cell_id);
+
+	int Ccell_grabDlg::GetCellId();
+	void Ccell_grabDlg::SetCellId(int cell_id);
+	void Ccell_grabDlg::AddCellID();
+
 
 	void Ccell_grabDlg::DoGrab();
 	void Ccell_grabDlg::GrabCopyToMainBuf(unsigned char* pimgSrc, unsigned char* pimgDst, int width, int height, int current_grab_idx);
@@ -66,6 +73,9 @@ public:
 	bool _search_tab = false;
 	bool _first_run = true;
 	int _search_tab_edge_pos = 0;
+	int _cell_id_map[GRAB_BUF_CNT];
+
+	int _cell_id = 0;
 
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 지원입니다.
 
