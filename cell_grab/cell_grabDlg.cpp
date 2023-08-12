@@ -97,6 +97,8 @@ void Ccell_grabDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_IMAGE_1, _grab_full_buf);
 	DDX_Control(pDX, IDC_IMAGE_2, _grab_tiny);
 	DDX_Control(pDX, IDC_IMAGE_3, _inspect);
+	DDX_Control(pDX, IDC_IMAGE_4, _cell_buf_view);
+	
 
 }
 
@@ -148,13 +150,55 @@ BOOL Ccell_grabDlg::OnInitDialog()
 	_grab_full_buf.gCreate(WIDTH, GRAB_BUF_SIZE, 8);
 	_grab_tiny.gCreate(WIDTH, HEIGHT_GRAB, 8);
 	_inspect.gCreate(WIDTH, HEIGHT, 8);
+	_cell_buf_view.gCreate(200, 800, 24);
 
 	_grab_buf = new unsigned char[WIDTH * GRAB_BUF_SIZE];
 	memset(_grab_buf, 0, sizeof(unsigned char) * WIDTH * GRAB_BUF_SIZE);
 
 	memset(_cell_id_map, 0, sizeof(int) * GRAB_BUF_CNT);
 
+	//DrawCellBuf();
+
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
+}
+
+void Ccell_grabDlg::DrawCellBuf()
+{
+	_cell_buf_view.gSetImage(NULL, 0, 0, 3);
+
+	int width = _cell_buf_view.gGetWidth();
+	int height = _cell_buf_view.gGetHeight();
+	int bpp = _cell_buf_view.gGetBPP() / 8;
+	
+
+	memset(_cell_buf_view.gGetImgPtr(), 0, sizeof(unsigned char) * width * height * bpp);
+
+	int length_h = height / 40;
+
+	for (int i = 0; i < 40; i++) {
+		CPoint ptLine1;
+		CPoint ptLine2;
+		ptLine1.x = 0;
+		ptLine1.y = (i + 1) * length_h;
+
+		ptLine2.x = width;
+		ptLine2.y = (i + 1) * length_h;
+
+		_cell_buf_view.gDrawLine(ptLine1, ptLine2, RGB(230, 230, 230));
+	}
+
+	for (int i = 0; i < 40; i++) {
+		CPoint ptText;
+		ptText.x = width * 0.1;
+		ptText.y = i * length_h;
+		CString strText;
+		strText.Format("%2d|  %2d", i, _cell_id_map[i]);
+		string strText_ = strText;
+		int font_size = 100;
+		_cell_buf_view.gDrawText(ptText, strText_, RGB(255, 234, 0), font_size);
+	}
+
+	_cell_buf_view.UpdateDisplay();
 }
 
 int Ccell_grabDlg::GetCurrentGrabIdx()
@@ -222,6 +266,68 @@ void Ccell_grabDlg::PutCellId(int grab_idx, int cell_id)
 	_cell_id_map[grab_idx] = cell_id;
 }
 
+int Ccell_grabDlg::GetInsCellID(int current_grab_idx, int before_range)
+{
+	int cell_id = 0;
+
+	int stt_y = current_grab_idx - before_range;
+	int end_y = current_grab_idx;
+	
+	vector<int> vt_cell_id;
+	vt_cell_id.clear();
+
+	if (stt_y < 0) {
+		//전 버퍼로 넘어가면 - 2번 카피
+		int stt_y1 = GRAB_BUF_CNT + stt_y;
+		int end_y1 = GRAB_BUF_CNT;
+		
+		for (int i = stt_y1; i < end_y1; i++) {
+			if (_cell_id_map[i] != 0) {
+				vt_cell_id.emplace_back(_cell_id_map[i]);
+				//가져온건 버퍼에서 지운다.
+				_cell_id_map[i] = 0;
+			}
+		}
+
+		int stt_y2 = 0;
+		int end_y2 = end_y;
+
+		for (int i = stt_y1; i < end_y1; i++) {
+			if (_cell_id_map[i] != 0) {
+				vt_cell_id.emplace_back(_cell_id_map[i]);
+				//가져온건 버퍼에서 지운다.
+				_cell_id_map[i] = 0;
+			}
+		}
+
+	}
+	else {
+		int stt_y1 = stt_y;
+		int end_y1 = end_y;
+
+		for (int i = stt_y1; i < end_y1; i++) {
+			if (_cell_id_map[i] != 0) {
+				vt_cell_id.emplace_back(_cell_id_map[i]);
+				//가져온건 버퍼에서 지운다.
+				_cell_id_map[i] = 0;
+			}
+		}
+	}
+
+	int cell_list_size = vt_cell_id.size();
+
+	//현재 위치에서 젤 인접한거 가져오게
+	if (cell_list_size > 0) {
+		cell_id = vt_cell_id[cell_list_size - 1];
+	}
+	
+	if (cell_id == 0) {
+		int a = 9;
+	}
+
+	return cell_id;
+}
+
 void Ccell_grabDlg::DoGrab()
 {
 	vector<CString> vt_file_list = GetFileListInFolder("D:\\SplitImg\\");
@@ -257,6 +363,10 @@ void Ccell_grabDlg::DoGrab()
 
 		//탭이 있다면 grab end idx를 설정한다
 		if (bSearchTab == true) {
+
+			//탭 들어옴을 시뮬
+			AfxBeginThread(Thread_SetCellNo, this, THREAD_PRIORITY_HIGHEST, 0);
+
 			//거리로 설정하자
 			SetRemainTabIdx(5);
 			SetSearchTab(true);
@@ -273,13 +383,24 @@ void Ccell_grabDlg::DoGrab()
 		if (remain_tab_idx <= 0 && GetSearchTab() == true) {
 			SetSearchTab(false);
 			//inspect 버퍼로 카피 후 검사 - thread 로 처리하자(해당 버퍼 근처에 cell no 넘겨서 처리)
+			int cellid = GetInsCellID(current_idx, 6);
+			_inspect.gSetImage(NULL, 0, 0, 8);
 			CopyToInspectBuf(_grab_buf, _inspect.gGetImgPtr(), WIDTH, GRAB_BUF_SIZE, _inspect.gGetWidth(), _inspect.gGetHeight(), GetSearchTabEdgePos() - SPEC_TAB_LENGTH * 0.5);
+			//image에 cell그려주자(test)
+			CString str_cell_id;
+			str_cell_id.Format("Cell ID : %d", cellid);
+			string str_cell_id_ = str_cell_id;
+			CPoint ptText;
+			ptText.SetPoint(100, 200);
+			int font_size = 100;
+			_inspect.gDrawText(ptText, str_cell_id_, RGB(0, 255, 0), font_size);
 			_inspect.UpdateDisplay();
 
 			strLog.Format("CopyWithInspect[%d] current_idx:%d, remain_tab_idx:%d", i, current_idx, remain_tab_idx);
 			_glogger->info(strLog);
 		}
 
+		DrawCellBuf();
 		//실제 정속은 초당60
 		Sleep(200);
 	}

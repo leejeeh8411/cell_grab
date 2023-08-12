@@ -35,6 +35,9 @@ public:
 	gImage _grab_full_buf;
 	gImage _grab_tiny;
 	gImage _inspect;
+	gImage _cell_buf_view;
+
+	void Ccell_grabDlg::DrawCellBuf();
 
 	int Ccell_grabDlg::GetCurrentGrabIdx();
 	void Ccell_grabDlg::SetCurrentGrabIdx(int current_grab_idx);
@@ -45,11 +48,11 @@ public:
 	int Ccell_grabDlg::GetSearchTabEdgePos();
 	void Ccell_grabDlg::SetSearchTabEdgePos(int searchTab);
 	
-	void Ccell_grabDlg::PutCellId(int grab_idx, int cell_id);
-
-	int Ccell_grabDlg::GetCellId();
-	void Ccell_grabDlg::SetCellId(int cell_id);
+	
+	//현재 cell id를 저장한다(테스트용)
 	void Ccell_grabDlg::AddCellID();
+	//현재 범위에서 n번째 전까지 확인하여 cell no 리턴
+	int Ccell_grabDlg::GetInsCellID(int current_grab_idx, int before_range);
 
 
 	void Ccell_grabDlg::DoGrab();
@@ -67,6 +70,7 @@ public:
 
 	protected:
 
+		
 	unsigned char* _grab_buf;
 	int _grab_idx = 0;
 	int _remain_tab = 0;
@@ -74,8 +78,14 @@ public:
 	bool _first_run = true;
 	int _search_tab_edge_pos = 0;
 	int _cell_id_map[GRAB_BUF_CNT];
+	int _cell_id = 1;
 
-	int _cell_id = 0;
+	//cell no를 cell buf에 넣는다
+	void Ccell_grabDlg::PutCellId(int grab_idx, int cell_id);
+	//현재 cell id를 가져온다(테스트용)
+	int Ccell_grabDlg::GetCellId();
+	//현재 cell id를 저장한다(테스트용)
+	void Ccell_grabDlg::SetCellId(int cell_id);
 
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 지원입니다.
 
